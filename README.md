@@ -90,7 +90,10 @@ Open the URL shown in the terminal (usually `http://localhost:8501`).
 | `requirements.txt` | Python dependencies |
 | `.gitignore` | Ignores `.venv`, `.env`, caches, IDE files, etc. |
 
-## How it works (high level)
+## Architecture Diagram
+![Architecture diagram](Architecture_Diagram.png)
+
+## How it works
 
 1. **Planner**: outline aligned to request, age, style, length
 2. **Writer**: full story from the plan
@@ -100,14 +103,7 @@ Open the URL shown in the terminal (usually `http://localhost:8501`).
 
 All model traffic goes through **`call_model`** and `openai.ChatCompletion.create` with **`gpt-3.5-turbo`**.
 
-## Deploying (for example Streamlit Community Cloud)
 
-1. Push this repo to GitHub.
-2. Create a new app pointing at the repo; main file **`app.py`**.
-3. Add **`OPENAI_API_KEY`** in the app's **Secrets** (same name as the env var).
-4. Ensure **`requirements.txt`** is at the repo root Streamlit uses for install.
-
-If dependency install fails on the host, pin versions conservatively and redeploy. Check the full build log above the generic "non-zero exit code" line for the real error.
 
 
 
