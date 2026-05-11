@@ -14,10 +14,7 @@ if not openai.api_key:
 
 
 def call_model(prompt: str, max_tokens: int = 1200, temperature: float = 0.3) -> str:
-    """
-    Send a single prompt to the OpenAI model and return the text response.
-    We intentionally keep the same model as the starter code.
-    """
+   
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=[{"role": "user", "content": prompt}],
@@ -42,9 +39,7 @@ def normalize_style(style: str) -> str:
 
 
 def build_style_instruction(style: str, custom_style: str = "") -> str:
-    """
-    Combine a preset style with optional free-form user style guidance.
-    """
+   
     preset = normalize_style(style)
     custom_style = custom_style.strip()
 
@@ -76,9 +71,7 @@ def word_count(text: str) -> int:
 
 
 def should_include_child_name(user_request: str, child_name: str) -> bool:
-    """
-    Include child name only when user explicitly asks for it.
-    """
+   
     if not child_name.strip():
         return False
 
@@ -114,46 +107,50 @@ def planner_agent(
     length: str,
     child_name: str = "",
 ) -> str:
-    """
-    Create a short story plan before generating the full story.
-    """
+   
     style_instruction = build_style_instruction(style, custom_style)
     normalized_length = normalize_length(length)
 
     prompt = f"""
-You are a planner for children's stories for ages {age_band}.
+You are a children's story architect for ages {age_band}.
 
-Your job is to create a short, clear, age-appropriate outline based on the user's request.
+Your job is to build a tight, emotionally resonant story outline that a writer can turn into a vivid bedtime story.
 
-Requirements:
-- Follow the user's request closely
-- The story may be calm, playful, magical, adventurous, or funny depending on the request
-- Keep the story emotionally safe and appropriate for children ages {age_band}
-- Use a clear beginning, middle, and end
-- Include a small challenge or point of tension, but keep it age appropriate
-- End with a satisfying, reassuring, or heartwarming resolution
+Story arc requirements — use this exact three-act structure:
+- Act 1 HOOK: Open with a single vivid sensory detail or action. Never start with "Once upon a time", waking up, or a weather description.
+- Act 1 WANT: Within the first two sentences, establish exactly what the main character wants or needs.
+- Act 2 OBSTACLE: One clear obstacle that directly blocks the want. Keep it age-appropriate — no real danger, no loss, no scary threat.
+- Act 2 ATTEMPTS: The character tries at least twice and fails before succeeding. Persistence, not luck, drives the story forward.
+- Act 3 RESOLUTION: The character solves the problem through their own idea or action — never rescued by an adult or by accident.
+- Act 3 ECHO: The final moment mirrors the opening image or feeling, but changed in a small, satisfying way.
+
+Additional requirements:
 - Style: {style_instruction}
-- Treat custom style guidance as required when provided (for example suspense, humor, or dialogue preferences)
-- Target story length: {normalized_length}
-- Main character priority: strictly preserve the main character from the user's request.
-- Child name field: {child_name if child_name else "none"}
-- Never replace or rename the main character with the child name unless the user explicitly requests that rename.
+- If custom style guidance is provided, treat it as a required constraint, not a suggestion.
+- Target length: {normalized_length}
+- Keep vocabulary and sentence complexity appropriate for ages {age_band}.
+- The emotional tone of the ending must feel safe, warm, and sleep-ready — even for adventure stories.
+- Main character: preserve exactly who the user specified. Do not rename or replace them.
+- Child name field: {child_name if child_name else "none"} — only weave this name in if the user explicitly asked for it.
 
 User request:
 {user_request}
 
-Return exactly in this format:
+Return exactly in this format (no extra commentary):
 
 Title idea:
 Main character:
 Setting:
-Beginning:
-Small challenge:
-Resolution:
-Ending feeling:
+Opening image (one vivid sentence):
+Character want:
+Obstacle:
+First attempt (fails):
+Second attempt (succeeds):
+Resolution (character-driven):
+Closing echo:
 Vocabulary level:
 """
-    return call_model(prompt, max_tokens=260, temperature=0.2)
+    return call_model(prompt, max_tokens=320, temperature=0.2)
 
 
 def writer_agent(
@@ -172,26 +169,34 @@ def writer_agent(
     normalized_length = normalize_length(length)
 
     prompt = f"""
-You are an expert storyteller for children ages {age_band}.
+You are a master storyteller for children ages {age_band}. Your stories are vivid, warm, and impossible to put down — but always leave children feeling safe and sleepy at the end.
 
-Write an age-appropriate story using the user request and plan below.
+Write a complete bedtime story using the plan below.
 
-Requirements:
-- Begin with a short title on the first line
-- After the title, write the story in short readable paragraphs
-- Use simple, clear language appropriate for ages {age_band}
-- Match both the selected style and any custom style notes
-- Treat custom style notes as mandatory constraints when provided.
-- If custom style notes ask for suspense, include gentle age-appropriate suspense beats.
-- The story may be calm, playful, magical, adventurous, funny, or exciting depending on the user's request
-- If the story is adventurous or playful, allow energy and excitement while keeping it age-appropriate
-- Avoid frightening, graphic, disturbing, or overly intense content
-- Include a clear beginning, middle, and end
-- End with a satisfying and emotionally safe feeling
+Craft requirements:
+- Begin with the title on the first line, then a blank line, then the story.
+- Open mid-action or mid-scene using the opening image from the plan. Never begin with "Once upon a time", a character waking up, or a description of the weather.
+- Show emotions through action and dialogue — not labels. Write "Her tail wagged so fast it blurred" not "She was excited."
+- Every paragraph must contain at least one specific sensory detail: a smell, a sound, a texture, a color, or a taste.
+- Dialogue must sound natural for a child or creature of that age — short sentences, contractions, real kid-speak.
+- Use sentence length for pacing: short punchy sentences for action and tension; longer flowing sentences for calm and wonder.
+- The character must try and fail at least once before succeeding. Effort, not luck, earns the win.
+- The resolution must come from the character's own idea or action.
+- The final paragraph must bring back the opening image or feeling in a changed way, and leave the reader feeling warm, safe, and ready for sleep.
+
+Style and safety requirements:
+- Style: {style_instruction}
+- If custom style notes are provided, treat them as mandatory constraints.
+- For custom suspense: use gentle, age-appropriate tension only — a rustling sound, a wrong turn, a missing object. Never real danger or fear.
+- For adventurous or playful styles: allow energy and excitement, but land softly at the end.
+- No frightening, graphic, or upsetting content. No unresolved conflict. No sad endings.
+- Language: simple, clear, child-friendly. Avoid words a {age_band}-year-old wouldn't know unless the meaning is obvious from context.
+
+Structure:
+- Write in short readable paragraphs (3–5 sentences each).
 - Length: {normalized_length}
-- Main character priority: strictly preserve the main character from the user's request.
-- Child name field: {child_name if child_name else "none"}
-- Never replace or rename the main character with the child name unless the user explicitly requests that rename.
+- Main character: use exactly who the user specified. Do not rename or replace them.
+- Child name field: {child_name if child_name else "none"} — only use this name if the user explicitly asked for it.
 
 User request:
 {user_request}
@@ -199,7 +204,7 @@ User request:
 Story plan:
 {story_plan}
 
-Write only the final story.
+Write only the final story. No commentary, no notes.
 """
     max_tokens = 2800 if length == "Long" else 1700
     story = call_model(prompt, max_tokens=max_tokens, temperature=0.65)
@@ -207,26 +212,25 @@ Write only the final story.
     min_words, _ = target_word_range(length)
     if word_count(story) < min_words:
         expand_prompt = f"""
-You are improving a children's story for ages {age_band}.
+You are expanding a children's story for ages {age_band} that is too short.
 
-The story is too short for the requested length.
-Expand it while preserving the same characters, tone, and plot.
+Expand it to reach at least {min_words} words while preserving everything that is already working.
 
-Requirements:
-- Keep the title on the first line
-- Keep the same main character from the user request
-- Do not rename characters
-- Keep content age-appropriate and emotionally safe
-- Keep style: {style_instruction}
-- Ensure the final story is at least {min_words} words
+Expansion rules:
+- Keep the title on the first line.
+- Keep every character name exactly as written.
+- Add sensory details, dialogue, and one extra attempt or small detour — do not add new plot twists.
+- Keep the same tone, style, and emotional arc.
+- The ending must remain warm and sleep-ready.
+- Style: {style_instruction}
 
 User request:
 {user_request}
 
-Current short story:
+Current story:
 {story}
 
-Return only the expanded final story.
+Return only the expanded final story. No commentary.
 """
         story = call_model(expand_prompt, max_tokens=max_tokens, temperature=0.45)
 
@@ -238,31 +242,29 @@ def judge_agent(user_request: str, story: str, age_band: str) -> str:
     Evaluate the story for quality and age appropriateness.
     """
     prompt = f"""
-You are a strict but kind evaluator for children's stories for ages {age_band}.
+You are a rigorous but fair editor for children's bedtime stories targeting ages {age_band}.
 
-Evaluate the story on these criteria from 1 to 5:
-- age appropriateness
-- language simplicity
-- coherence
-- bedtime suitability
-- instruction following
-- overall quality
+Score the story on each criterion from 1 to 5 using the benchmarks below. Be strict — a 5 means a real child of this age could read it aloud without stumbling, and a parent would happily read it at bedtime.
 
-Judge using this guidance:
-- Stories should be age appropriate, emotionally safe, and easy to understand
-- The energy level should match the requested style
-- Adventurous, funny, or magical stories are allowed if they remain suitable for children
-- Bedtime suitability means the story should not be disturbing, overwhelming, or frightening, and should end in a reassuring or satisfying way
-- Language simplicity means short, clear, child-friendly wording
-- Coherence means the story has a clear flow and resolution
-- Instruction following means the story matches the user's request
+Scoring benchmarks by age band:
+- Ages 5–7: sentences should average 8–12 words, no subordinate clauses, concrete nouns only, every character's motivation stated explicitly, zero ambiguous morality.
+- Ages 8–10: sentences may average up to 16 words, one subplot is allowed, light irony is fine, character motivation may be implied but not hidden.
 
-Also look for:
-- scary or upsetting content
-- vocabulary that is too advanced
-- confusing transitions
-- too much intensity for the age group
-- anything that feels too dense or hard to follow
+Criteria:
+1. Age appropriateness — vocabulary, sentence length, and concepts suit the age band.
+2. Language simplicity — wording is short, clear, and child-friendly with no unnecessary complexity.
+3. Coherence — the story has a clear arc: hook, obstacle, attempts, resolution, and echo ending.
+4. Bedtime suitability — no disturbing, overwhelming, or frightening content; ends in a warm, safe, sleep-ready feeling.
+5. Instruction following — the story matches what the user asked for in style, characters, and theme.
+6. Overall quality — vivid sensory detail, emotions shown through action, natural dialogue, satisfying structure.
+
+Flag specifically if you find:
+- Any sentence that exceeds the age-band word limit by more than 50%.
+- Abstract vocabulary used more than twice.
+- An emotion stated as a label ("she felt sad") rather than shown through action.
+- A resolution that relies on luck or an adult rescuing the character.
+- An ending that does not feel safe or sleep-ready.
+- A mismatch between the requested style and what was written.
 
 Return exactly in this format:
 
@@ -313,25 +315,33 @@ def rewriter_agent(
     normalized_length = normalize_length(length)
 
     prompt = f"""
-You are revising a story for children ages {age_band}.
+You are a careful editor revising a children's bedtime story for ages {age_band}.
 
-Improve the story using the judge's feedback.
+Your job is to fix only what the judge flagged — not to rewrite the whole story.
 
-Requirements:
-- Keep the main story idea and heart of the story
-- Keep or improve the title on the first line
-- Make the language simpler where needed
-- Remove anything scary, confusing, or too intense
-- Keep the story aligned with the requested style and energy
-- Treat custom style notes as required constraints when provided.
-- If custom style notes request suspense, keep it gentle and age-appropriate rather than scary.
-- Use short readable paragraphs
-- Preserve a clear story arc
-- Style: {style_instruction}
+Preservation rules (follow these first):
+- Keep all character names exactly as written.
+- Keep any sentence or paragraph not mentioned in the judge's problems.
+- Keep the opening sentence unless it was specifically flagged.
+- Keep the ending paragraph unless it was specifically flagged.
+- Keep all dialogue that was not flagged.
+- Make the minimum change that fixes each problem.
+
+Fix rules:
+- If a sentence is too long: split it, not rewrite it.
+- If a word is too advanced: replace only that word, not the whole sentence.
+- If an emotion is labeled ("she felt scared"): rewrite just that phrase as an action ("her hands gripped the blanket").
+- If the resolution relies on luck or an adult: give the character a simple idea that solves the problem themselves.
+- If the ending isn't sleep-ready: soften only the final paragraph.
+- If the style doesn't match: adjust tone and energy without changing the plot.
+
+Non-negotiable requirements:
+- Title stays on the first line.
+- Content remains age-appropriate and emotionally safe for ages {age_band}.
+- Style: {style_instruction} — custom style notes are mandatory constraints.
 - Target length: {normalized_length}
-- Main character priority: strictly preserve the main character from the user's request.
-- Child name field: {child_name if child_name else "none"}
-- Never replace or rename the main character with the child name unless the user explicitly requests that rename.
+- Main character: keep exactly who the user specified.
+- Child name field: {child_name if child_name else "none"} — only use if the user explicitly asked for it.
 
 User request:
 {user_request}
@@ -342,7 +352,7 @@ Original story:
 Judge feedback:
 {judge_feedback}
 
-Write only the improved final story.
+Write only the improved final story. No commentary.
 """
     return call_model(prompt, max_tokens=1700, temperature=0.3)
 
@@ -365,30 +375,26 @@ def feedback_agent(
     normalized_length = normalize_length(length)
 
     prompt = f"""
-You are revising a children's story for ages {age_band}.
+You are a surgical editor for a children's bedtime story targeting ages {age_band}.
 
-Revise the story based on the user's feedback while preserving as much of the current story as possible.
+The user wants a specific change. Your job is to make exactly that change and nothing else.
 
-Very important editing rules:
-- If the user asks for a specific local change, make only that change
-- Keep all unchanged parts as close to the original as possible
-- Do not rewrite the whole story unless the user clearly asks for a broader rewrite
-- If the user asks to change a name, word, sentence, line, or small detail, only update the relevant parts
-- Preserve tone, structure, and meaning unless the user asks otherwise
-- Preserve the selected style and custom style unless the user asks to change them
-- Treat custom style notes as required constraints when provided.
-- If custom style notes request suspense, keep it gentle and age-appropriate rather than scary.
+Editing rules — read these before touching anything:
+- If the user asks to change a single word, name, sentence, or small detail: update only those specific parts. Every other word stays identical.
+- If the user asks to change a scene or section: rewrite only that section. Everything before and after stays word-for-word.
+- If the user asks for a broader rewrite (different ending, different character, different tone): then you may rewrite more, but still preserve what does not need to change.
+- Do not improve, polish, or "while I'm at it" touch anything the user did not mention.
+- Do not change character names unless the user explicitly asks.
+- Do not change the tone, pacing, or style unless the user explicitly asks.
 
-Requirements:
-- Keep the story age appropriate
-- Keep language simple and clear
-- Keep or improve the title on the first line
-- Use short readable paragraphs
-- Style: {style_instruction}
+Non-negotiable requirements:
+- Title stays on the first line.
+- Story remains age-appropriate and emotionally safe for ages {age_band}.
+- Language stays simple and clear.
+- Style: {style_instruction} — custom style notes are mandatory unless the user asks to change them.
 - Target length: {normalized_length}
-- Main character priority: strictly preserve the main character from the user's request.
-- Child name field: {child_name if child_name else "none"}
-- Never replace or rename the main character with the child name unless the user explicitly requests that rename.
+- Main character: keep exactly who the user specified in the original request.
+- Child name field: {child_name if child_name else "none"} — only use if the user explicitly asked for it.
 
 Original user request:
 {user_request}
@@ -399,7 +405,7 @@ Current story:
 User feedback:
 {user_feedback}
 
-Write only the revised story.
+Write only the revised story. No commentary, no notes.
 """
     return call_model(prompt, max_tokens=1700, temperature=0.2)
 
