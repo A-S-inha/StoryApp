@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import openai
 import html
 import re
@@ -415,6 +416,51 @@ def count_words(text: str) -> int:
     return len(re.findall(r"\b[\w'-]+\b", text or ""))
 
 
+def scroll_story_into_view() -> None:
+    """Scroll the main page so the story panel is in view (used after revision)."""
+    components.html(
+        """
+        <script>
+        (function () {
+            function docsToTry() {
+                var list = [document];
+                try {
+                    if (window.parent && window.parent !== window) list.push(window.parent.document);
+                } catch (e1) {}
+                try {
+                    if (window.parent && window.parent.parent && window.parent.parent !== window) {
+                        list.push(window.parent.parent.document);
+                    }
+                } catch (e2) {}
+                return list;
+            }
+            var found = false;
+            docsToTry().forEach(function (doc) {
+                if (found || !doc) return;
+                var el = doc.getElementById("story-top-anchor");
+                if (el) {
+                    el.scrollIntoView({behavior: "smooth", block: "start"});
+                    found = true;
+                }
+            });
+            if (found) return;
+            docsToTry().forEach(function (doc) {
+                if (found || !doc) return;
+                var main = doc.querySelector("section.main") ||
+                    doc.querySelector('[data-testid="stAppViewContainer"]');
+                if (main) {
+                    main.scrollTo({top: 0, behavior: "smooth"});
+                    found = true;
+                }
+            });
+        })();
+        </script>
+        """,
+        height=0,
+        width=0,
+    )
+
+
 def extract_story_body(story_text: str, story_title: str) -> str:
     if not story_text:
         return ""
@@ -542,8 +588,7 @@ with left_col:
 with right_col:
     if st.session_state["generated"]:
         notice = st.session_state.pop("_post_revision_notice", None)
-        if notice:
-            st.success(notice)
+        scroll_after_revision = st.session_state.pop("_scroll_after_revision", False)
 
         story_title = extract_story_title(st.session_state["final_story"])
         edition = int(st.session_state.get("story_edition") or 1)
@@ -555,7 +600,7 @@ with right_col:
         if story_body.strip():
             st.markdown(
                 f"""
-                <div class="story-shell">
+                <div id="story-top-anchor" class="story-shell">
                     <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap;">
                         <div>
                             <div class="story-kicker">📖 Your Adventure</div>
@@ -576,12 +621,18 @@ with right_col:
                 "Hmm, the story came back empty. Tap ✨ Start the Story again or try a little more detail in your idea."
             )
 
+        if notice:
+            st.success(notice)
+
+        if scroll_after_revision:
+            scroll_story_into_view()
+
         render_judge_summary(st.session_state["scores"])
 
         with st.expander("View story plan"):
             st.write(st.session_state["story_plan"])
 
-        with st.expander("Read the judge's full note (easy to read here)"):
+        with st.expander("Read the judge's full note"):
             st.caption("This is the same judge the app used. Scores above come from this text.")
             st.code(st.session_state["judge_feedback"] or "(No judge text yet.)", language=None)
 
@@ -640,15 +691,16 @@ with right_col:
                     if changed:
                         st.session_state["_post_revision_notice"] = (
                             f"Your adventure was updated (about {words_after} words now, was about {words_before}). "
-                            "Scroll up to read it. The score cards are new because the judge checked this version too."
+                            "The score cards are new because the judge checked this version too."
                         )
                     else:
                         st.session_state["_post_revision_notice"] = (
                             "The story text looks almost the same. Try saying exactly what you want different "
                             "(for example: add a talking cloud, make the ending sillier, use shorter sentences)."
                         )
+                    st.session_state["_scroll_after_revision"] = True
                     try:
-                        st.toast("Story refresh ready. Look at the top of this column.", icon="✨")
+                        st.toast("Story refresh ready. We scrolled you back to your adventure.", icon="✨")
                     except Exception:
                         pass
                     st.rerun()
