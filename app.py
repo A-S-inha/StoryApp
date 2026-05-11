@@ -9,8 +9,8 @@ from story_engine import (
 )
 
 st.set_page_config(
-    page_title="Bedtime Story Generator",
-    page_icon="🌙",
+    page_title="Dream Up a Story",
+    page_icon="✨",
     layout="wide",
 )
 
@@ -304,9 +304,9 @@ def initialize_session_state() -> None:
 
 def validate_user_input(user_request: str) -> str:
     if not user_request or not user_request.strip():
-        return "Please enter a story idea."
+        return "Tell us what happens in your story!"
     if len(user_request.strip()) < 10:
-        return "Please provide a slightly more detailed story request."
+        return "Add a few more words so we can dream up something great!"
     return ""
 
 
@@ -366,14 +366,14 @@ def render_judge_summary(scores: dict) -> None:
 
 def extract_story_title(story_text: str) -> str:
     if not story_text:
-        return "Your Story"
+        return "Your Adventure"
     lines = [line.strip() for line in story_text.splitlines() if line.strip()]
     if not lines:
-        return "Your Story"
+        return "Your Adventure"
     first_line = lines[0]
     if len(first_line) < 70:
         return first_line
-    return "Your Story"
+    return "Your Adventure"
 
 
 def extract_story_body(story_text: str, story_title: str) -> str:
@@ -399,8 +399,8 @@ st.markdown(
         <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
             <div>
                 <div style="font-size:2rem;">🌙 🌈 ☁️</div>
-                <h1 class="hero-title">Bedtime Story Generator</h1>
-                <div class="hero-subtitle">Create warm, imaginative, age-appropriate stories for children.</div>
+                <h1 class="hero-title">Dream Up a Story ✨</h1>
+                <div class="hero-subtitle">Pick a mood, add a spark, and jump into a magical story made just for you.</div>
             </div>
             <div style="font-size:4rem; opacity:0.9;">🌟</div>
         </div>
@@ -415,23 +415,23 @@ with left_col:
     st.markdown(
         """
         <div class="card">
-            <div class="section-title">🌈 Tell us what you need</div>
-            <div class="section-subtle">Choose a few settings, then add your own creative touch.</div>
+            <div class="section-title">🌈 Let's build your adventure</div>
+            <div class="section-subtle">Choose your story style, add your idea, and we'll turn it into something fun, cozy, or wild.</div>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
     user_request = st.text_area(
-        "Story request",
+        "What should happen in your story?",
         value=st.session_state["user_request"],
-        placeholder="A brave little fox finds a glowing map hidden under a mushroom.",
+        placeholder="A dragon who is scared to fly finds a secret map in the clouds.",
         height=160,
     )
 
     age_options = ["5-7", "8-10"]
     age_index = age_options.index(st.session_state["age_band"]) if st.session_state["age_band"] in age_options else 0
-    age_band = st.selectbox("Age range", options=age_options, index=age_index)
+    age_band = st.selectbox("Who is this story for?", options=age_options, index=age_index)
 
     style_options = [
         "Calm & Cozy",
@@ -443,21 +443,21 @@ with left_col:
         "Brave Little Quest",
     ]
     style_index = style_options.index(st.session_state["style"]) if st.session_state["style"] in style_options else 1
-    style = st.selectbox("Story style", options=style_options, index=style_index)
+    style = st.selectbox("Choose the vibe", options=style_options, index=style_index)
 
     custom_style = st.text_input(
-        "Custom style notes (optional)",
+        "Extra magic (optional)",
         value=st.session_state["custom_style"],
-        placeholder="Examples: whimsical, funny with lots of dialogue, adventurous but not scary, gentle mystery",
+        placeholder="Examples: super silly, magical, lots of talking animals, exciting but not scary",
     )
 
     length_options = ["Short", "Medium", "Long"]
     length_index = length_options.index(st.session_state["length"]) if st.session_state["length"] in length_options else 1
-    length = st.selectbox("Story length", options=length_options, index=length_index)
+    length = st.selectbox("How long should the adventure be?", options=length_options, index=length_index)
 
-    generate_clicked = st.button("☀️ Generate Story", use_container_width=True)
+    generate_clicked = st.button("✨ Start the Story", use_container_width=True)
 
-    st.caption("💛 Stories are generated with care, imagination, and child-friendly language.")
+    st.caption("💛 Made to feel fun, imaginative, and bedtime-friendly.")
 
     if generate_clicked:
         error_message = validate_user_input(user_request)
@@ -472,7 +472,7 @@ with left_col:
             st.session_state["length"] = length
 
             try:
-                with st.spinner("Planning, writing, and reviewing the story..."):
+                with st.spinner("Dreaming up your story..."):
                     result = generate_story_pipeline(
                         user_request=user_request,
                         age_band=age_band,
@@ -513,7 +513,7 @@ with right_col:
                 <div class="story-shell">
                     <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap;">
                         <div>
-                            <div class="story-kicker">🌙 Your Story</div>
+                            <div class="story-kicker">📖 Your Adventure</div>
                             <div class="story-title">{safe_title}</div>
                         </div>
                     </div>
@@ -527,7 +527,7 @@ with right_col:
             )
         else:
             st.info(
-                "The model returned an empty story body. Please click Generate Story again or adjust your prompt."
+                "Hmm, the story came back empty. Tap ✨ Start the Story again or try a little more detail in your idea."
             )
 
         render_judge_summary(st.session_state["scores"])
@@ -546,8 +546,8 @@ with right_col:
         st.markdown(
             """
             <div class="card">
-                <div class="section-title">✏️ Request changes</div>
-                <div class="section-subtle">Ask for broad rewrites or very specific edits.</div>
+                <div class="section-title">🪄 Change the story</div>
+                <div class="section-subtle">Make it funnier, add more magic, change a name, or keep the adventure going.</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -555,20 +555,20 @@ with right_col:
 
         user_feedback = st.text_input(
             "Revision request",
-            placeholder="Examples: change the character name to Luna, replace 'tiny' with 'brave', make it funnier, add more dialogue, shorten the ending",
+            placeholder="Examples: more jokes, add a friendly dragon, change a name, extra sparkle at the end",
             label_visibility="collapsed",
         )
 
         st.markdown('<div class="secondary-button">', unsafe_allow_html=True)
-        revise_clicked = st.button("🪄 Revise Story", use_container_width=True)
+        revise_clicked = st.button("🪄 Make It Even Better", use_container_width=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
         if revise_clicked:
             if not user_feedback.strip():
-                st.error("Please enter feedback for the revision.")
+                st.error("Type what you would like to change first!")
             else:
                 try:
-                    with st.spinner("Revising the story and judging it again..."):
+                    with st.spinner("Sprinkling more magic on your story..."):
                         revision_result = revise_story_with_feedback(
                             user_request=st.session_state["user_request"],
                             current_story=st.session_state["final_story"],
@@ -602,9 +602,9 @@ with right_col:
             <div class="story-shell" style="display:flex; align-items:center; justify-content:center; text-align:center;">
                 <div>
                     <div style="font-size:4.2rem; margin-bottom:0.5rem;">☁️🌙✨</div>
-                    <div class="section-title" style="font-size:1.8rem;">Your story will appear here</div>
+                    <div class="section-title" style="font-size:1.8rem;">Your adventure begins here ✨</div>
                     <div class="section-subtle" style="font-size:1rem;">
-                        Start with a prompt on the left, choose a style and length, and generate a story.
+                        Add your idea on the left, pick your vibe, and watch your story come to life.
                     </div>
                 </div>
             </div>
@@ -614,7 +614,7 @@ with right_col:
 
 st.markdown(
     """
-    <div class="tiny-footer">💗 Made with warmth, imagination, and a gentle story-judge loop ✨</div>
+    <div class="tiny-footer">💗 Packed with imagination, sparkle, and story magic ✨</div>
     """,
     unsafe_allow_html=True,
 )
