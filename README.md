@@ -2,6 +2,8 @@
 
 A **Streamlit** web app that generates age-appropriate children's stories using **OpenAI**. It runs a small **multi-agent pipeline**: plan the story, write a draft, judge quality, optionally rewrite, then display results. You can also **revise** a finished story with natural-language feedback and get a fresh judge pass.
 
+**Live app:** [https://story-app.streamlit.app/](https://story-app.streamlit.app/)
+
 ## Features
 
 - **Story request**: free-text prompt for what happens in the story
