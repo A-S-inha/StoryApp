@@ -1,6 +1,7 @@
 import streamlit as st
 import openai
 import html
+import re
 
 from story_engine import (
     generate_story_pipeline,
@@ -269,6 +270,39 @@ st.markdown(
         background: rgba(255,255,255,0.72) !important;
     }
 
+    .stExpander summary,
+    .stExpander summary span,
+    .stExpander summary p {
+        color: #1e293b !important;
+    }
+
+    [data-testid="stExpanderDetails"] {
+        color: #334155 !important;
+    }
+
+    [data-testid="stExpanderDetails"] pre,
+    [data-testid="stExpanderDetails"] code,
+    [data-testid="stExpanderDetails"] .stMarkdown,
+    [data-testid="stExpanderDetails"] p {
+        color: #1e293b !important;
+    }
+
+    [data-testid="stExpanderDetails"] pre {
+        background: #f8fafc !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 12px !important;
+        padding: 0.85rem 1rem !important;
+        white-space: pre-wrap !important;
+        word-break: break-word !important;
+    }
+
+    .story-edition {
+        font-size: 0.92rem;
+        color: #64748b;
+        font-weight: 600;
+        margin-bottom: 0.35rem;
+    }
+
     @media (max-width: 1000px) {
         .score-grid {
             grid-template-columns: repeat(2, 1fr);
@@ -296,6 +330,7 @@ def initialize_session_state() -> None:
         "final_story": "",
         "scores": {},
         "generated": False,
+        "story_edition": 1,
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -374,6 +409,10 @@ def extract_story_title(story_text: str) -> str:
     if len(first_line) < 70:
         return first_line
     return "Your Adventure"
+
+
+def count_words(text: str) -> int:
+    return len(re.findall(r"\b[\w'-]+\b", text or ""))
 
 
 def extract_story_body(story_text: str, story_title: str) -> str:
@@ -487,6 +526,7 @@ with left_col:
                 st.session_state["final_story"] = result["final_story"]
                 st.session_state["scores"] = parse_judge_scores(result["judge_feedback"])
                 st.session_state["generated"] = True
+                st.session_state["story_edition"] = 1
             except openai.error.RateLimitError:
                 st.error(
                     "OpenAI quota limit reached for this API key. "
@@ -501,7 +541,12 @@ with left_col:
 
 with right_col:
     if st.session_state["generated"]:
+        notice = st.session_state.pop("_post_revision_notice", None)
+        if notice:
+            st.success(notice)
+
         story_title = extract_story_title(st.session_state["final_story"])
+        edition = int(st.session_state.get("story_edition") or 1)
 
         story_text = st.session_state["final_story"]
         story_body = extract_story_body(story_text, story_title)
@@ -514,6 +559,7 @@ with right_col:
                     <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; flex-wrap:wrap;">
                         <div>
                             <div class="story-kicker">📖 Your Adventure</div>
+                            <div class="story-edition">Edition {edition}</div>
                             <div class="story-title">{safe_title}</div>
                         </div>
                     </div>
@@ -535,8 +581,9 @@ with right_col:
         with st.expander("View story plan"):
             st.write(st.session_state["story_plan"])
 
-        with st.expander("View judge feedback"):
-            st.text(st.session_state["judge_feedback"])
+        with st.expander("Read the judge's full note (easy to read here)"):
+            st.caption("This is the same judge the app used. Scores above come from this text.")
+            st.code(st.session_state["judge_feedback"] or "(No judge text yet.)", language=None)
 
         with st.expander("View first draft"):
             st.write(st.session_state["draft_story"])
@@ -568,10 +615,12 @@ with right_col:
                 st.error("Type what you would like to change first!")
             else:
                 try:
+                    before_story = st.session_state["final_story"]
+                    words_before = count_words(before_story)
                     with st.spinner("Sprinkling more magic on your story..."):
                         revision_result = revise_story_with_feedback(
                             user_request=st.session_state["user_request"],
-                            current_story=st.session_state["final_story"],
+                            current_story=before_story,
                             user_feedback=user_feedback,
                             age_band=st.session_state["age_band"],
                             style=st.session_state["style"],
@@ -579,11 +628,29 @@ with right_col:
                             length=st.session_state["length"],
                         )
 
-                    st.session_state["final_story"] = revision_result["revised_story"]
+                    after_story = revision_result["revised_story"]
+                    words_after = count_words(after_story)
+                    changed = before_story.strip() != after_story.strip()
+
+                    st.session_state["final_story"] = after_story
                     st.session_state["judge_feedback"] = revision_result["judge_feedback"]
                     st.session_state["scores"] = parse_judge_scores(revision_result["judge_feedback"])
+                    st.session_state["story_edition"] = edition + 1
 
-                    st.success("Story revised successfully.")
+                    if changed:
+                        st.session_state["_post_revision_notice"] = (
+                            f"Your adventure was updated (about {words_after} words now, was about {words_before}). "
+                            "Scroll up to read it. The score cards are new because the judge checked this version too."
+                        )
+                    else:
+                        st.session_state["_post_revision_notice"] = (
+                            "The story text looks almost the same. Try saying exactly what you want different "
+                            "(for example: add a talking cloud, make the ending sillier, use shorter sentences)."
+                        )
+                    try:
+                        st.toast("Story refresh ready. Look at the top of this column.", icon="✨")
+                    except Exception:
+                        pass
                     st.rerun()
                 except openai.error.RateLimitError:
                     st.error(
